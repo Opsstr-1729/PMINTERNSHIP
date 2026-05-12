@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>InternConnect Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --teal:#0e5774; --teal-l:#1a7a9e; --teal-d:#093d53; --teal-xl:#e8f4f8;
+  --bg:#f0f4f8; --white:rgba(255,255,255,0.88); --border:rgba(255,255,255,0.92);
+  --sh:5px 5px 16px rgba(14,87,116,.10),-3px -3px 12px rgba(255,255,255,.88);
+  --sh-sm:3px 3px 10px rgba(14,87,116,.08),-2px -2px 8px rgba(255,255,255,.85);
+  --t1:#0d1b24; --t2:#4a6274; --r:18px; --f:'Plus Jakarta Sans',sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--f);background:var(--bg);min-height:100svh;color:var(--t1);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 50% at 15% -5%,rgba(14,87,116,.12) 0%,transparent 60%),
+             radial-gradient(ellipse 55% 40% at 95% 105%,rgba(14,87,116,.09) 0%,transparent 55%)}
+.wrap{position:relative;z-index:1;max-width:430px;margin:0 auto;padding-bottom:48px}
+
+/* ── HEADER ── */
+.hdr{background:linear-gradient(148deg,var(--teal-d) 0%,var(--teal) 52%,var(--teal-l) 100%);
+  padding:54px 24px 38px;position:relative;overflow:hidden;border-radius:0 0 26px 26px}
+.hdr::before,.hdr::after{content:'';position:absolute;border-radius:50%;pointer-events:none}
+.hdr::before{width:160px;height:160px;background:rgba(255,255,255,.07);top:-45px;right:-28px}
+.hdr::after{width:75px;height:75px;background:rgba(255,255,255,.05);bottom:12px;right:68px}
+.live-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.24);border-radius:100px;padding:5px 13px;
+  font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:rgba(255,255,255,.88);margin-bottom:12px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#4ecb8a;
+  animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+.hdr h1{font-size:29px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1.15}
+.hdr h1 em{color:rgba(255,255,255,.48);font-style:normal;font-weight:300}
+.hdr p{font-size:13px;color:rgba(255,255,255,.58);margin-top:7px}
+
+/* ── LAYOUT ── */
+.body{padding:18px 15px 0;display:flex;flex-direction:column;gap:13px}
+
+/* ── STEP BAR ── */
+.steps{display:flex;align-items:center;padding:0 4px}
+.s-dot{width:27px;height:27px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:800;
+  transition:background .3s,box-shadow .3s,color .3s}
+.s-dot.done  {background:var(--teal);color:#fff}
+.s-dot.active{background:var(--teal);color:#fff;box-shadow:0 0 0 5px rgba(14,87,116,.14)}
+.s-dot.idle  {background:rgba(14,87,116,.09);color:#b0bec5}
+.s-line{flex:1;height:2px;background:rgba(14,87,116,.09);margin:0 5px;border-radius:2px;overflow:hidden}
+.s-fill{height:100%;width:0%;background:var(--teal);border-radius:2px;
+  transition:width .5s cubic-bezier(.16,1,.3,1)}
+
+/* ── SELECTION CARD ── */
+.sel-card{background:var(--white);backdrop-filter:blur(18px) saturate(170%);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);
+  border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:visible}
+
+/* ── DROPDOWN ROW (trigger) ── */
+.dd-row{display:flex;align-items:center;gap:12px;padding:15px 17px;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+  transition:background .15s;border-radius:var(--r)}
+.dd-row:active{background:rgba(14,87,116,.04)}
+.dd-row.disabled{opacity:.45;pointer-events:none;cursor:default}
+
+.dd-ico{width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,#ddf0f7,#c2e5f2);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.dd-txt{flex:1;min-width:0}
+.dd-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin-bottom:2px}
+.dd-val{font-size:15px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-val.ph{color:#b8cdd8;font-weight:400}
+.chev{flex-shrink:0;color:var(--teal);transition:transform .28s ease}
+.chev.open{transform:rotate(180deg)}
+
+.dd-divider{height:1px;background:rgba(14,87,116,.07);margin:0 17px}
+
+/* ── INLINE OPTION LIST ── */
+/* Rendered BELOW the selection card, not overlapping it */
+.opt-list{
+  display:none;flex-direction:column;
+  background:#fff;border:1px solid rgba(14,87,116,.12);
+  border-radius:14px;box-shadow:0 6px 28px rgba(14,87,116,.13);
+  overflow:hidden;margin-top:6px;
+  animation:dropIn .22s cubic-bezier(.16,1,.3,1);
+}
+.opt-list.open{display:flex}
+@keyframes dropIn{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:translateY(0)}}
+
+.opt-item{padding:14px 17px;font-size:14px;font-weight:600;color:var(--t1);
+  border-bottom:1px solid rgba(14,87,116,.055);cursor:pointer;
+  transition:background .12s;-webkit-user-select:none;user-select:none}
+.opt-item:last-child{border-bottom:none}
+.opt-item:active,.opt-item.sel{background:var(--teal-xl);color:var(--teal-d)}
+
+/* ── OUTPUT STATES ── */
+.state-card{background:var(--white);backdrop-filter:blur(18px) saturate(170%);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);
+  border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh)}
+
+.loading{padding:44px 24px;display:flex;flex-direction:column;align-items:center;gap:15px}
+.spinner{width:42px;height:42px;border-radius:50%;border:3px solid rgba(14,87,116,.11);
+  border-top-color:var(--teal);animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading p{font-size:14px;font-weight:500;color:var(--t2);text-align:center}
+
+.err-box{padding:26px 22px;text-align:center}
+.err-ico{font-size:36px;margin-bottom:9px}
+.err-ttl{font-size:15px;font-weight:700;color:#c0392b;margin-bottom:5px}
+.err-msg{font-size:13px;color:var(--t2);line-height:1.55}
+.retry-btn{margin-top:16px;background:var(--teal);color:#fff;border:none;border-radius:100px;
+  padding:10px 22px;font-size:13px;font-weight:700;font-family:var(--f);
+  cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  transition:transform .13s,opacity .13s}
+.retry-btn:active{transform:scale(.96);opacity:.84}
+
+.empty-box{padding:38px 24px;text-align:center}
+.empty-illo{width:76px;height:76px;border-radius:22px;margin:0 auto 16px;
+  background:linear-gradient(135deg,var(--teal-xl),rgba(14,87,116,.11));
+  display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:var(--sh-sm)}
+.empty-box h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.empty-box p{font-size:13px;color:var(--t2);line-height:1.6}
+
+/* ── DASHBOARD CARD ── */
+.dash-card{background:var(--white);backdrop-filter:blur(18px) saturate(170%);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);border:1px solid var(--border);
+  border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;
+  animation:slideUp .38s cubic-bezier(.16,1,.3,1)}
+@keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+
+/* DASHBOARD HEADER — course name is the hero */
+.dash-hdr{padding:20px 18px 16px;display:flex;align-items:flex-start;gap:12px;
+  border-bottom:1px solid rgba(14,87,116,.08);cursor:pointer;
+  transition:background .15s;-webkit-user-select:none;user-select:none}
+.dash-hdr:active{background:rgba(14,87,116,.03)}
+
+.dash-hdr-left{flex:1;min-width:0}
+
+/* REF ID — small pill badge */
+.ref-badge{display:inline-flex;align-items:center;gap:6px;
+  background:linear-gradient(90deg,var(--teal-d),var(--teal));
+  color:#fff;border-radius:100px;padding:4px 11px;
+  font-size:11px;font-weight:700;letter-spacing:.04em;margin-bottom:9px}
+.ref-badge svg{opacity:.7}
+
+/* COURSE — main title */
+.course-title{font-size:20px;font-weight:800;color:var(--t1);line-height:1.2;letter-spacing:-.3px;margin-bottom:3px}
+
+/* AREA — sub-title */
+.area-sub{font-size:13px;font-weight:600;color:var(--teal);display:flex;align-items:center;gap:5px}
+.area-sub::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--teal);flex-shrink:0}
+
+.qual-tag{display:inline-flex;align-items:center;margin-top:7px;
+  background:rgba(14,87,116,.08);border-radius:100px;padding:3px 10px;
+  font-size:11px;font-weight:700;color:var(--teal-d)}
+
+/* collapse chevron */
+.dash-chev{flex-shrink:0;color:var(--t2);transition:transform .28s ease;margin-top:3px}
+.dash-chev.open{transform:rotate(180deg)}
+
+/* COLLAPSIBLE BODY */
+.dash-body{overflow:hidden;transition:max-height .4s cubic-bezier(.16,1,.3,1),opacity .35s ease}
+.dash-body.collapsed{max-height:0;opacity:0}
+.dash-body.expanded{max-height:2000px;opacity:1}
+
+/* STATS GRID */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(14,87,116,.07)}
+.stat{background:var(--white);padding:14px 16px}
+.stat.full{grid-column:span 2}
+.s-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--t2);margin-bottom:4px}
+.s-val{font-size:17px;font-weight:700;color:var(--teal-d);line-height:1.2}
+.s-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(14,87,116,.08);
+  border-radius:100px;padding:3px 9px;font-size:10.5px;font-weight:700;color:var(--teal);margin-top:4px}
+
+/* DETAIL ROWS */
+.details{padding:14px 18px}
+.d-row{display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-bottom:1px solid rgba(14,87,116,.06)}
+.d-row:first-child{padding-top:0}
+.d-row:last-child{border-bottom:none;padding-bottom:0}
+.d-ico{width:34px;height:34px;border-radius:10px;background:var(--teal-xl);
+  display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;margin-top:1px}
+.d-k{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:2px}
+.d-v{font-size:13.5px;font-weight:600;color:var(--t1);line-height:1.4}
+
+/* ELIGIBILITY */
+.elig-hdr{background:rgba(14,87,116,.04);padding:11px 18px;
+  display:flex;align-items:center;gap:8px;border-top:1px solid rgba(14,87,116,.07)}
+.elig-ttl{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.10em;color:var(--teal-d)}
+.elig-cnt{background:var(--teal);color:#fff;border-radius:100px;
+  font-size:10px;font-weight:700;padding:2px 8px;margin-left:auto}
+.elig-list{padding:10px 18px 18px;background:var(--white)}
+.elig-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;
+  border-bottom:1px dashed rgba(14,87,116,.07);animation:fadeIn .3s ease both}
+.elig-item:first-child{padding-top:0}
+.elig-item:last-child{border-bottom:none;padding-bottom:0}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.bul{width:6px;height:6px;border-radius:50%;background:var(--teal);margin-top:7px;flex-shrink:0}
+.elig-txt{font-size:13px;font-weight:500;color:var(--t1);line-height:1.55}
+
+/* FOOTER */
+.foot{text-align:center;padding:6px 0 14px}
+.foot p{font-size:11px;color:rgba(14,87,116,.30);font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="live-badge"><span class="live-dot"></span>Live Portal</div>
+    <h1>Intern<em>Connect</em><br>Portal</h1>
+    <p>Find your internship opportunity in seconds</p>
+  </header>
+
+  <div class="body">
+
+    <!-- STEP BAR -->
+    <div class="steps">
+      <div class="s-dot active" id="s1">1</div>
+      <div class="s-line"><div class="s-fill" id="sl1"></div></div>
+      <div class="s-dot idle"   id="s2">2</div>
+      <div class="s-line"><div class="s-fill" id="sl2"></div></div>
+      <div class="s-dot idle"   id="s3">✓</div>
+    </div>
+
+    <!-- SELECTION CARD -->
+    <div class="sel-card">
+
+      <!-- QUALIFICATION ROW -->
+      <div class="dd-row" id="qualRow">
+        <div class="dd-ico">🎓</div>
+        <div class="dd-txt">
+          <div class="dd-lbl">Step 1 · Qualification</div>
+          <div class="dd-val ph" id="qualVal">Select qualification…</div>
+        </div>
+        <svg class="chev" id="qualChev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <!-- Qual options rendered inline here, outside the card flow -->
+
+      <div class="dd-divider" id="ddDiv"></div>
+
+      <!-- COURSE ROW -->
+      <div class="dd-row disabled" id="courseRow">
+        <div class="dd-ico">📚</div>
+        <div class="dd-txt">
+          <div class="dd-lbl">Step 2 · Course</div>
+          <div class="dd-val ph" id="courseVal">Select qualification first…</div>
+        </div>
+        <svg class="chev" id="courseChev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+    </div>
+
+    <!-- QUAL OPTION LIST (outside sel-card so it pushes content down) -->
+    <div class="opt-list" id="qualOpts"></div>
+
+    <!-- COURSE OPTION LIST -->
+    <div class="opt-list" id="courseOpts"></div>
+
+    <!-- OUTPUT -->
+    <div id="output">
+      <div class="state-card">
+        <div class="empty-box">
+          <div class="empty-illo">🔭</div>
+          <h3>Discover Your Opportunity</h3>
+          <p>Select your qualification and course above to view internship details.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><p>Powered by KASE IT 2026</p></div>
+  </div><!-- /body -->
+</div><!-- /wrap -->
+
+<script>
+const CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSZBMYFkQS8vAoPK7Hrm7F7yrrCrFmjhhsjuARIUi80U-ZA1cArTHvj-i1bX5EL29wUfIIUZwxVQo-E/pub?output=csv';
+
+let allData=[], selQual='', selCourse='', qKey='', cKey='';
+let dashExpanded = true;
+
+/* ── DOM ── */
+const $ = id => document.getElementById(id);
+const qualRow=$('qualRow'), qualChev=$('qualChev'), qualVal=$('qualVal'), qualOpts=$('qualOpts');
+const courseRow=$('courseRow'), courseChev=$('courseChev'), courseVal=$('courseVal'), courseOpts=$('courseOpts');
+const output=$('output');
+const s1=$('s1'),s2=$('s2'),s3=$('s3'),sl1=$('sl1'),sl2=$('sl2');
+
+/* ── STEPS ── */
+function setStep(n){
+  [s1,s2,s3].forEach(el=>el.className='s-dot idle');
+  sl1.style.width=sl2.style.width='0%';
+  if(n>=1)s1.className='s-dot done';
+  if(n>=2){s2.className='s-dot done';sl1.style.width='100%'}
+  if(n>=3){s3.className='s-dot done';sl2.style.width='100%'}
+  if(n===1)s1.className='s-dot active';
+  if(n===2)s2.className='s-dot active';
+  if(n===3)s3.className='s-dot active';
+}
+
+/* ── OPEN / CLOSE PANELS ── */
+function openList(list, chev){
+  const wasOpen = list.classList.contains('open');
+  closeAll();
+  if(!wasOpen){ list.classList.add('open'); chev.classList.add('open'); }
+}
+function closeAll(){
+  [qualOpts,courseOpts].forEach(l=>l.classList.remove('open'));
+  [qualChev,courseChev].forEach(c=>c.classList.remove('open'));
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('#qualRow') && !e.target.closest('#qualOpts') &&
+     !e.target.closest('#courseRow') && !e.target.closest('#courseOpts')) closeAll();
+});
+
+qualRow.addEventListener('click', e=>{ e.stopPropagation(); openList(qualOpts, qualChev); });
+courseRow.addEventListener('click', e=>{
+  if(courseRow.classList.contains('disabled')) return;
+  e.stopPropagation();
+  openList(courseOpts, courseChev);
+});
+
+/* ── UTILS ── */
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function findCol(sample, candidates){
+  const keys=Object.keys(sample), norm=s=>(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  for(const c of candidates){const f=keys.find(k=>norm(k)===norm(c));if(f)return f}
+  for(const c of candidates){const f=keys.find(k=>norm(k).includes(norm(c).split(' ')[0]));if(f)return f}
+  return null;
+}
+function showLoading(){output.innerHTML=`<div class="state-card"><div class="loading"><div class="spinner"></div><p>Fetching internship data…<br><span style="font-size:12px;opacity:.6">Please wait</span></p></div></div>`}
+function showError(m){output.innerHTML=`<div class="state-card"><div class="err-box"><div class="err-ico">⚠️</div><div class="err-ttl">Unable to Load Data</div><div class="err-msg">${esc(m)}</div><button class="retry-btn" onclick="loadCSV()">↺ &nbsp;Try Again</button></div></div>`}
+function showEmpty(){output.innerHTML=`<div class="state-card"><div class="empty-box"><div class="empty-illo">🔭</div><h3>Discover Your Opportunity</h3><p>Select your qualification and course above to view internship details.</p></div></div>`}
+
+/* ── LOAD CSV ── */
+function loadCSV(){
+  showLoading();
+  Papa.parse(CSV,{
+    download:true,header:true,skipEmptyLines:true,
+    complete(res){
+      if(!res.data||!res.data.length){showError('No data found.');return}
+      allData=res.data;
+      buildQualOpts();
+      showEmpty();
+      setStep(1);
+    },
+    error(err){showError(err&&err.message?err.message:'Network error. Please try again.')}
+  });
+}
+
+/* ── BUILD QUAL OPTIONS ── */
+function buildQualOpts(){
+  qKey = findCol(allData[0],['qualification','qual','degree','education type','type']) || Object.keys(allData[0])[0];
+  const unique=[...new Set(allData.map(r=>(r[qKey]||'').trim()).filter(Boolean))];
+  qualOpts.innerHTML=unique.map(v=>`<div class="opt-item" data-v="${esc(v)}">${esc(v)}</div>`).join('');
+  qualOpts.querySelectorAll('.opt-item').forEach(el=>{
+    el.addEventListener('click', e=>{ e.stopPropagation(); pickQual(el.dataset.v); });
+  });
+}
+
+function pickQual(val){
+  selQual=val;
+  closeAll();
+  qualVal.textContent=val; qualVal.classList.remove('ph');
+  // reset course
+  selCourse='';
+  courseVal.textContent='Choose your course…'; courseVal.classList.add('ph');
+  setStep(2);
+
+  cKey = findCol(allData[0],['course','program','branch','stream','trade','specialization','course name']) || Object.keys(allData[0])[1]||Object.keys(allData[0])[0];
+  const filtered=allData.filter(r=>(r[qKey]||'').trim()===val);
+  const unique=[...new Set(filtered.map(r=>(r[cKey]||'').trim()).filter(Boolean))];
+
+  courseOpts.innerHTML=unique.map(v=>`<div class="opt-item" data-v="${esc(v)}">${esc(v)}</div>`).join('');
+  courseOpts.querySelectorAll('.opt-item').forEach(el=>{
+    el.addEventListener('click', e=>{ e.stopPropagation(); pickCourse(el.dataset.v); });
+  });
+
+  courseRow.classList.remove('disabled');
+  output.innerHTML=`<div class="state-card"><div class="empty-box"><div class="empty-illo" style="font-size:26px">📋</div><h3>${unique.length} Course${unique.length!==1?'s':''} Available</h3><p>Now pick your course to view the internship dashboard.</p></div></div>`;
+}
+
+function pickCourse(val){
+  selCourse=val;
+  closeAll();
+  courseVal.textContent=val; courseVal.classList.remove('ph');
+  setStep(3);
+  const row=allData.find(r=>(r[qKey]||'').trim()===selQual&&(r[cKey]||'').trim()===val);
+  if(!row){showError('No matching internship data found.');return}
+  renderDash(row,val);
+}
+
+/* ── RENDER DASHBOARD ── */
+function renderDash(row,courseName){
+  const keys=Object.keys(row);
+  const refKey  = findCol(row,['internship reference id','reference id','ref id','id','ref no','ref']);
+  const areaKey = findCol(row,['area','field','sector','area/field','domain','department']);
+  const oppsKey = findCol(row,['no of opportunities','no. of opportunities','opportunities','vacancies','seats','openings']);
+  const benKey  = findCol(row,['target beneficiaries','beneficiaries','target','who can apply']);
+  const eligKey = findCol(row,['eligibility criteria','eligibility','criteria','requirements']);
+
+  const refId = refKey  ? (row[refKey] ||'').trim()||'—':'—';
+  const area  = areaKey ? (row[areaKey]||'').trim()||'N/A':'N/A';
+  const opps  = oppsKey ? (row[oppsKey]||'').trim()||'N/A':'N/A';
+  const ben   = benKey  ? (row[benKey] ||'').trim():'';
+  const eligR = eligKey ? (row[eligKey]||'').trim():'';
+
+  let eligItems=[];
+  if(eligR){
+    if(eligR.includes('\n'))     eligItems=eligR.split('\n');
+    else if(eligR.includes(';')) eligItems=eligR.split(';');
+    else if(eligR.includes(',')) eligItems=eligR.split(',');
+    else                          eligItems=[eligR];
+    eligItems=eligItems.map(s=>s.replace(/^[-•*\d.]\s*/,'').trim()).filter(Boolean);
+  }
+
+  const known=new Set([refKey,areaKey,oppsKey,benKey,eligKey,qKey,cKey].filter(Boolean));
+  const extras=keys.filter(k=>!known.has(k)&&(row[k]||'').trim()).slice(0,4);
+  const icons=['🏢','📅','💼','📍'];
+
+  const extraHTML=extras.map((k,i)=>`
+    <div class="d-row">
+      <div class="d-ico">${icons[i]}</div>
+      <div><div class="d-k">${esc(k)}</div><div class="d-v">${esc((row[k]||'').trim())}</div></div>
+    </div>`).join('');
+
+  const eligHTML=eligItems.length
+    ?eligItems.map((t,i)=>`<div class="elig-item" style="animation-delay:${i*.05}s"><div class="bul"></div><div class="elig-txt">${esc(t)}</div></div>`).join('')
+    :`<div class="elig-item"><div class="bul"></div><div class="elig-txt" style="color:var(--t2)">No specific criteria listed.</div></div>`;
+
+  dashExpanded=true;
+
+  output.innerHTML=`
+<div class="dash-card">
+
+  <!-- HEADER (clickable to collapse) -->
+  <div class="dash-hdr" id="dashHdr">
+    <div class="dash-hdr-left">
+      <!-- REF ID as small badge -->
+      <div class="ref-badge">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6"/></svg>
+        ${esc(refId)}
+      </div>
+      <!-- Course name — MAIN HEADING -->
+      <div class="course-title">${esc(courseName)}</div>
+      <!-- Area — sub heading -->
+      <div class="area-sub">${esc(area)}</div>
+      <!-- Qual tag -->
+      <div class="qual-tag">${esc(selQual)}</div>
+    </div>
+    <svg class="dash-chev open" id="dashChev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+
+  <!-- COLLAPSIBLE BODY -->
+  <div class="dash-body expanded" id="dashBody">
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat">
+        <div class="s-lbl">Opportunities</div>
+        <div class="s-val">${esc(opps)}</div>
+        <div class="s-pill">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/></svg>
+          Seats
+        </div>
+      </div>
+      ${ben?`<div class="stat"><div class="s-lbl">Target Beneficiaries</div><div class="s-val" style="font-size:13px;font-weight:600;line-height:1.35">${esc(ben)}</div></div>`
+          :`<div class="stat"><div class="s-lbl">Qualification</div><div class="s-val" style="font-size:13px;font-weight:600">${esc(selQual)}</div></div>`}
+    </div>
+
+    ${extraHTML?`<div class="details">${extraHTML}</div>`:''}
+
+    <!-- ELIGIBILITY -->
+    <div class="elig-hdr">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--teal-d)" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <div class="elig-ttl">Eligibility Criteria</div>
+      <div class="elig-cnt">${eligItems.length||1}</div>
+    </div>
+    <div class="elig-list">${eligHTML}</div>
+
+  </div><!-- /dash-body -->
+</div>`;
+
+  // Wire up collapse toggle
+  document.getElementById('dashHdr').addEventListener('click', toggleDash);
+}
+
+function toggleDash(){
+  const body=$('dashBody'), chev=$('dashChev');
+  if(!body||!chev) return;
+  dashExpanded=!dashExpanded;
+  body.className='dash-body '+(dashExpanded?'expanded':'collapsed');
+  chev.classList.toggle('open', dashExpanded);
+}
+
+loadCSV();
+</script>
+</body>
+</html>
